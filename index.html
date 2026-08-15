@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jacob Jibu — [ARCADE RIG] Embedded Engineer Portfolio</title>
+<meta name="description" content="Retro Arcade & CRT Embedded Systems Portfolio of Jacob Jibu — Electrical & Electronics Engineer at VIT Chennai.">
+
+<!-- Retro & Modern Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&family=Silkscreen:wght@400;700&family=JetBrains+Mono:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<!-- Modular Stylesheet -->
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- AUTHENTIC CRT SCANLINES & OVERLAYS (NO CORNER VIGNETTE) -->
+<div class="crt-screen-overlay" id="crtOverlay"></div>
+<div class="crt-flicker"></div>
+<div class="grid-bg"></div>
+
+<!-- COMIC CURSOR CANVAS -->
+<canvas id="brushCanvas"></canvas>
+<div id="cursor-ring" aria-hidden="true"></div>
+<div id="cursor-dot" aria-hidden="true"></div>
+<div id="coord-readout">X:<span id="cx">000</span> &nbsp; Y:<span id="cy">000</span> &nbsp; SCALE 1:1</div>
+
+<!-- ================= 💾 FAST RETRO BIOS BOOT SEQUENCE ================= -->
+<div id="biosOverlay">
+  <div class="bios-header">
+    <span>JACOB JIBU EMBEDDED BIOS V4.20 (REV 2026)</span>
+    <span>CPU: ESP32-D0WDQ6 @ 240MHz</span>
+  </div>
+  <div id="biosLog"></div>
+  <div class="bios-footer">
+    <span>PRESS ANY KEY OR CLICK TO SKIP BOOT...</span>
+    <button class="bios-skip-btn" id="biosSkipBtn">SKIP [ESC]</button>
+  </div>
+</div>
+
+<!-- ================= 📟 FLOATING HACKER CLI TERMINAL ================= -->
+<div id="cliModal">
+  <div class="cli-bar">
+    <span>📟 JACOB-OS DEBUG TERMINAL // PORT 22 [ONLINE]</span>
+    <button class="cli-close" id="cliCloseBtn">✕</button>
+  </div>
+  <div class="cli-body" id="cliOutput">
+    <p class="prompt-highlight">Welcome to Jacob Jibu's Engineering Shell [Version 7.0.26]</p>
+    <p>Type <span class="prompt-cmd">'help'</span> to see available commands or <span class="prompt-cmd">'skills'</span>, <span class="prompt-cmd">'projects'</span>, <span class="prompt-cmd">'resume'</span>.</p>
+  </div>
+  <div class="cli-input-row">
+    <span class="cli-prefix">guest@jacob-rig:~$</span>
+    <input type="text" id="cliInput" autofocus autocomplete="off" spellcheck="false">
+  </div>
+</div>
+
+<!-- ================= 🎮 PROJECT DETAIL MODAL (MISSION BRIEFING) ================= -->
+<div id="projectModal" class="project-modal">
+  <div class="project-modal-backdrop" id="projectModalBackdrop"></div>
+  <div class="project-modal-panel">
+    <div class="project-modal-bar">
+      <span id="modalMissionId">MISSION-01</span>
+      <button class="project-modal-close" id="projectModalClose" aria-label="Close">✕ CLOSE [ESC]</button>
+    </div>
+    <div class="project-modal-body">
+      <div class="project-modal-media">
+        <img id="modalImage" src="" alt="" class="project-modal-img">
+        <div class="project-modal-noimg" id="modalNoImg">
+          <span class="noimg-glyph">📡</span>
+          <span>NO VISUAL LOG FOUND</span>
+        </div>
+        <span class="sel-corner sel-tl"></span>
+        <span class="sel-corner sel-tr"></span>
+        <span class="sel-corner sel-bl"></span>
+        <span class="sel-corner sel-br"></span>
+      </div>
+      <div class="project-modal-info">
+        <div class="project-modal-rev" id="modalRev">JAN–APR 2026</div>
+        <h3 id="modalTitle">Project Title</h3>
+        <p id="modalDesc">Full description...</p>
+        <div class="project-modal-meta" id="modalMeta"></div>
+        <div class="project-modal-footer-row">
+          <span class="proj-bounty" id="modalBounty">+450 EXP</span>
+          <a href="#contact" class="btn-arcade btn-arcade-ghost" id="modalContactBtn">✉️ DISCUSS THIS BUILD</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= TOP ARCADE HUD ================= -->
+<nav>
+  <div class="nav-left">
+    <div class="nav-mark">
+      <span class="dot"></span>
+      <span>JACOB JIBU // PLAYER 1</span>
+    </div>
+
+    <!-- 🪙 Interactive Coin Slot Easter Egg -->
+    <div class="coin-slot-widget" id="coinWidget" title="Click to insert credits!">
+      <span>🪙</span> <span id="coinCount">06</span> COINS
+    </div>
+  </div>
+
+  <div class="hud-btn-group">
+    <!-- 🔄 Reboot BIOS Button -->
+    <button class="hud-tool-btn" id="rebootBtn" title="Trigger Fast Retro BIOS Boot Sequence">
+      🔄 REBOOT
+    </button>
+    <!-- 💻 CLI Terminal Button -->
+    <button class="hud-tool-btn" id="cliToggleBtn" title="Open Interactive Debug CLI (~ Key)">
+      💻 CLI [~]
+    </button>
+    <!-- 🎵 Synthesized 8-Bit BGM Toggle -->
+    <button class="hud-tool-btn" id="bgmToggleBtn" title="Toggle Real-Time Synthesized 8-Bit Chiptune Music">
+      🎵 BGM: <span id="bgmState">OFF</span>
+    </button>
+    <!-- CRT Toggle -->
+    <button class="hud-tool-btn" id="crtToggleBtn" title="Toggle CRT Scanlines">
+      📺 CRT: <span id="crtState">ON</span>
+    </button>
+    <!-- ☰ Mobile Nav Toggle -->
+    <button class="hud-tool-btn nav-burger-btn" id="navBurgerBtn" aria-label="Open menu" aria-expanded="false">
+      ☰ MENU
+    </button>
+  </div>
+
+  <ul class="nav-links" id="navLinks">
+    <li><a href="#about">About</a></li>
+    <li><a href="#skills">Skills</a></li>
+    <li><a href="#projects">Projects</a></li>
+    <li><a href="#experience">Experience</a></li>
+    <li><a href="#contact">Contact</a></li>
+  </ul>
+</nav>
+
+<div class="container">
+
+  <!-- ================= HERO ARCADE CABINET ================= -->
+  <header class="hero-arcade">
+    <div class="arcade-marquee">
+      <div class="marquee-left">
+        <span style="color:var(--yellow)">★</span>
+        <span>SYSTEM: EMBEDDED RIG REV 2026</span>
+        <span style="color:var(--yellow)">★</span>
+      </div>
+      <div class="marquee-right">
+        <span>STATUS: 7TH SEMESTER [VIT CHENNAI]</span>
+        <span>CGPA: 8.19 / 10.0</span>
+      </div>
+    </div>
+
+    <div class="cabinet-frame">
+      <div class="cabinet-grid">
+
+        <!-- LEFT: HARDCODED 1P CHARACTER PORTRAIT -->
+        <div class="photo-slot-card">
+          <div class="photo-slot-header">
+            <span>[ 1P AVATAR FRAME ]</span>
+            <span>SPEC: 1:1</span>
+          </div>
+
+          <div class="photo-frame-box" id="charSelectFrame">
+            <img src="jacob-profile.png" alt="Jacob Jibu — Embedded Engineer" class="hardcoded-profile-img">
+            <span class="sel-corner sel-tl"></span>
+            <span class="sel-corner sel-tr"></span>
+            <span class="sel-corner sel-bl"></span>
+            <span class="sel-corner sel-br"></span>
+            <div class="sel-scanline"></div>
+            <div class="sel-tag">▶ P1 SELECTED</div>
+          </div>
+
+          <div class="photo-slot-footer">
+            <span>CLASS: EMBEDDED DEV</span>
+            <span>LVL: 07</span>
+          </div>
+        </div>
+
+        <!-- RIGHT: INTRO PLACEHOLDER & BIO -->
+        <div class="intro-slot-card">
+          <div>
+            <div class="eyebrow" style="margin-bottom:8px;">READY PLAYER ONE</div>
+            <h1 class="player-headline-title">
+              JACOB JIBU<br>
+              <span>EMBEDDED ENGINEER</span>
+            </h1>
+          </div>
+
+          <div class="intro-dialogue-box">
+            <div class="intro-box-badge">SYSTEM BIO // EMBEDDED RIG</div>
+            
+            <p class="intro-text" id="introBioText">
+              Electrical and Electronics Engineering undergraduate at <strong>VIT Chennai</strong> (7th Semester), engineering embedded systems, industrial automation, IoT telemetry, and ML-assisted control systems — from register-level firmware to fully integrated hardware.
+            </p>
+
+            <div class="intro-stats-bar">
+              <div class="intro-stat-cell">
+                <span class="intro-stat-label">DISCIPLINE</span>
+                <span class="intro-stat-val green">EEE</span>
+              </div>
+              <div class="intro-stat-cell">
+                <span class="intro-stat-label">CGPA / SCORE</span>
+                <span class="intro-stat-val">8.19 / 10.0</span>
+              </div>
+              <div class="intro-stat-cell">
+                <span class="intro-stat-label">PROJECTS</span>
+                <span class="intro-stat-val cyan">06 BUILDS</span>
+              </div>
+              <div class="intro-stat-cell">
+                <span class="intro-stat-label">GRADUATION</span>
+                <span class="intro-stat-val">2027</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="cabinet-btn-row">
+            <a href="Resume.pdf" class="btn-arcade" target="_blank" rel="noopener">
+              <span>⚡</span> DOWNLOAD RÉSUMÉ
+            </a>
+            <a href="https://www.linkedin.com/in/jacob-jibu-95a0a228b" class="btn-arcade btn-arcade-ghost" target="_blank" rel="noopener">
+              <span>🌐</span> LINKEDIN PROFILE →
+            </a>
+            <a href="#projects" class="btn-arcade btn-arcade-amber">
+              <span>🕹️</span> VIEW QUEST LOG
+            </a>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= 📸 FIELD TELEMETRY SNAPSHOTS ================= -->
+  <section class="moments">
+    <div class="moments-head">
+      <div>
+        <div class="eyebrow">FIELD TELEMETRY // SHOP FLOOR</div>
+        <h2 class="arcade-sec-title" style="margin:0;">STAGE PROOF SNAPSHOTS.</h2>
+      </div>
+      <p style="font-family:var(--font-pixel); font-size:9px; color:var(--yellow);">VERIFIED // NO CHEAT CODES USED</p>
+    </div>
+    <div class="moments-track">
+      <div class="moment">
+        <div class="moment-card">
+          <span class="moment-tag-badge">STAGE 03</span>
+          <div class="moment-img-box has-photo">
+            <img src="photo-rocket.jpg" alt="Team IGNITION rocket drop test" class="moment-photo-img">
+          </div>
+          <div class="moment-title">Team IGNITION</div>
+          <div class="moment-cap">Paraglider Avionics Rig, 2025</div>
+        </div>
+      </div>
+      <div class="moment">
+        <div class="moment-card">
+          <span class="moment-tag-badge">STAGE 02</span>
+          <div class="moment-img-box has-photo">
+            <img src="photo-apollo.jpg" alt="Apollo Tyres Ltd. plant gate" class="moment-photo-img">
+          </div>
+          <div class="moment-title">Apollo Tyres Ltd.</div>
+          <div class="moment-cap">Automation &amp; Instrumentation, 2025</div>
+        </div>
+      </div>
+      <div class="moment">
+        <div class="moment-card">
+          <span class="moment-tag-badge">STAGE 01</span>
+          <div class="moment-img-box has-photo">
+            <img src="photo-climate.jpg" alt="SIH Prototype IoT climate chamber" class="moment-photo-img">
+          </div>
+          <div class="moment-title">SIH Prototype</div>
+          <div class="moment-cap">IoT Climate Chamber, 2025</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<!-- ================= 🌀 ARCADE WARP PORTALS ================= -->
+<div class="doorways">
+  <a href="#projects" class="doorway">
+    <div class="doorway-inner">
+      <div>
+        <div class="doorway-label">WARP ZONE 01 // FIRMWARE &amp; HARDWARE LAB</div>
+        <h2>DESIGN ►►</h2>
+        <p>Embedded systems, microcontrollers, and IoT — the builds, start to finish.</p>
+      </div>
+      <span class="arrow">🕹️</span>
+    </div>
+  </a>
+  <a href="#experience" class="doorway">
+    <div class="doorway-inner">
+      <div>
+        <div class="doorway-label">WARP ZONE 02 // INDUSTRIAL FIELD GUILD</div>
+        <h2>BUILD ►►</h2>
+        <p>Hardware validation, rocketry recovery avionics, and industrial plant automation.</p>
+      </div>
+      <span class="arrow">⚡</span>
+    </div>
+  </a>
+</div>
+
+<div class="container">
+
+  <!-- ================= 👤 ABOUT: PLAYER 1 CHARACTER DOSSIER ================= -->
+  <section id="about">
+    <div class="eyebrow">Character Dossier</div>
+    <h2 class="arcade-sec-title">TRAINED TO DESIGN UNDER REAL CONSTRAINTS.</h2>
+    <div class="about-grid">
+      <div class="about-dossier-card">
+        <p>I'm an Electrical and Electronics Engineering undergraduate at <strong>VIT Chennai</strong> with hands-on experience across embedded systems, industrial automation, hardware validation, firmware development, wireless communication, and control systems.</p>
+        <p>I've led multidisciplinary projects built on ESP32-based embedded platforms — sensor interfacing, IoT telemetry networks, and machine-learning-based control applications — and I'm comfortable owning a build from system schematic design through prototyping, testing, and field integration. Currently seeking opportunities in embedded systems, industrial automation, and control engineering.</p>
+      </div>
+      <div class="about-stats-grid">
+        <div class="stat-arcade-box">
+          <span class="label">QUESTS BUILT</span>
+          <span class="num">06 BUILDS</span>
+        </div>
+        <div class="stat-arcade-box">
+          <span class="label">CGPA / HIGHSCORE</span>
+          <span class="num">8.19 / 10.0</span>
+        </div>
+        <div class="stat-arcade-box">
+          <span class="label">LINGUAL PROTOCOLS</span>
+          <span class="num">04 LANGS</span>
+        </div>
+        <div class="stat-arcade-box">
+          <span class="label">FINAL BOSS GRADUATION</span>
+          <span class="num">2027</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 🌳 INTERACTIVE RPG SKILL TREE & SPEC SHEET ================= -->
+  <section id="skills">
+    <div class="eyebrow">Arsenal &amp; Perk Tree</div>
+    <h2 class="arcade-sec-title">CAPABILITIES &amp; PERK GRAPH.</h2>
+
+    <div class="skill-tree-container">
+      <div class="tree-branch-grid">
+        <!-- Branch 1: Bare-Metal Firmware -->
+        <div class="tree-branch">
+          <div class="branch-header">⚔️ BARE-METAL FIRMWARE</div>
+          <div class="perk-node-list">
+            <div class="perk-node active" data-title="Embedded C &amp; C++" data-desc="Low-level memory management, register manipulation, direct peripheral register access, pointer arithmetic, and deterministic ISRs." data-stats="MASTERY: LVL 95 // SPEED: 100%">
+              <span>Embedded C / C++</span><span class="perk-lvl">LVL 95</span>
+            </div>
+            <div class="perk-node" data-title="ARM Cortex &amp; ESP-IDF" data-desc="FreeRTOS multi-threading, task synchronization, semaphores, deep sleep power states, and hardware timer configurations." data-stats="MASTERY: LVL 90 // REAL-TIME: 98%">
+              <span>ESP32 / FreeRTOS</span><span class="perk-lvl">LVL 90</span>
+            </div>
+            <div class="perk-node" data-title="Hack Assembly &amp; HDL" data-desc="Writing machine code assemblers and microcode instructions directly executed by the custom Hack 16-bit CPU ALU." data-stats="MASTERY: LVL 88 // LOGIC: 92%">
+              <span>Assembly &amp; HDL</span><span class="perk-lvl">LVL 88</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Branch 2: Circuit & Power Systems -->
+        <div class="tree-branch">
+          <div class="branch-header">⚡ CIRCUIT &amp; POWER SYSTEMS</div>
+          <div class="perk-node-list">
+            <div class="perk-node" data-title="LTspice &amp; Circuit Simulation" data-desc="Analog &amp; digital transient analysis, filter design, voltage regulation, signal conditioning, and thermal modeling." data-stats="MASTERY: LVL 92 // PRECISION: 96%">
+              <span>LTspice &amp; MATLAB</span><span class="perk-lvl">LVL 92</span>
+            </div>
+            <div class="perk-node" data-title="Hardware Validation &amp; Debugging" data-desc="Oscilloscope waveform tracing, logic analyzer bus sniffing (I2C/SPI/UART), PWM duty cycle tuning, and ESD protection." data-stats="MASTERY: LVL 94 // ACCURACY: 99%">
+              <span>Hardware Validation</span><span class="perk-lvl">LVL 94</span>
+            </div>
+            <div class="perk-node" data-title="Power Electronics &amp; Drives" data-desc="H-Bridge motor drivers, MOSFET switching converters, Peltier thermoelectric modules, and closed-loop PID control." data-stats="MASTERY: LVL 89 // POWER: 95%">
+              <span>Power Electronics</span><span class="perk-lvl">LVL 89</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Branch 3: Avionics & Automation -->
+        <div class="tree-branch">
+          <div class="branch-header">🚀 AVIONICS &amp; AUTOMATION</div>
+          <div class="perk-node-list">
+            <div class="perk-node" data-title="Paraglider Rocket Recovery" data-desc="Team IGNITION recovery subsystem member &amp; project lead: led the design, fabrication, and integration of an autonomous steerable paraglider descent mechanism and avionics." data-stats="MASTERY: LVL 96 // RELIABILITY: 99%">
+              <span>Paraglider Recovery Lead</span><span class="perk-lvl">LVL 96</span>
+            </div>
+            <div class="perk-node" data-title="Industrial Manufacturing Systems" data-desc="Apollo Tyres internship: practical exposure to plant manufacturing systems, 3-phase induction motors, motor drives, industrial control panels, and power distribution networks." data-stats="MASTERY: LVL 88 // PLANT SYSTEMS: 92%">
+              <span>Industrial Systems &amp; Drives</span><span class="perk-lvl">LVL 88</span>
+            </div>
+            <div class="perk-node" data-title="IoT &amp; Cloud Telemetry" data-desc="MQTT telemetry broker communication, machine learning edge inference for load forecasting, and mobile dashboard integration." data-stats="MASTERY: LVL 93 // TELEMETRY: 95%">
+              <span>IoT &amp; MQTT Telemetry</span><span class="perk-lvl">LVL 93</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Perk Lore Card -->
+      <div class="perk-lore-card" id="perkLoreCard">
+        <div>
+          <div class="perk-lore-title" id="loreTitle">PERK: Embedded C &amp; C++</div>
+          <div class="perk-lore-desc" id="loreDesc">Low-level memory management, register manipulation, direct peripheral register access, pointer arithmetic, and deterministic ISRs.</div>
+        </div>
+        <div class="perk-lore-stats" id="loreStats">MASTERY: LVL 95 // SPEED: 100%</div>
+      </div>
+    </div>
+
+    <!-- Static Spec Sheet for Recruiters -->
+    <div class="spec-sheet" style="margin-top:40px;">
+      <div class="spec-row">
+        <div class="spec-key">PROGRAMMING</div>
+        <div class="spec-val"><span class="tag">Embedded C</span><span class="tag">C</span><span class="tag">Python</span><span class="tag">Java</span></div>
+      </div>
+      <div class="spec-row">
+        <div class="spec-key">EMBEDDED CHIPS</div>
+        <div class="spec-val"><span class="tag">ESP32</span><span class="tag">ESP8266</span><span class="tag">Arduino</span></div>
+      </div>
+      <div class="spec-row">
+        <div class="spec-key">DEV TOOLS</div>
+        <div class="spec-val"><span class="tag">MATLAB</span><span class="tag">Simulink</span><span class="tag">LTspice</span><span class="tag">Keil µVision</span><span class="tag">Arduino IDE</span></div>
+      </div>
+      <div class="spec-row">
+        <div class="spec-key">CORE HARDWARE</div>
+        <div class="spec-val"><span class="tag">Embedded Systems</span><span class="tag">Circuit Design</span><span class="tag">Hardware Validation</span><span class="tag">Sensor Interfacing</span><span class="tag">IoT</span><span class="tag">Power Electronics</span><span class="tag">Control Systems</span><span class="tag">Industrial Systems</span></div>
+      </div>
+      <div class="spec-row">
+        <div class="spec-key">LANGUAGES</div>
+        <div class="spec-val"><span class="tag">English</span><span class="tag">Malayalam</span><span class="tag">Tamil</span><span class="tag">Hindi</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 🎛️ PROJECTS & QUEST CATEGORY FILTER BUTTONS ================= -->
+  <section id="projects">
+    <div class="eyebrow">Mission Select // 06 Builds</div>
+    <h2 class="arcade-sec-title">ACTIVE QUEST LOG &amp; BUILDS.</h2>
+
+    <!-- Filter Buttons Bar -->
+    <div class="quest-filter-bar">
+      <button class="filter-btn active" data-filter="all">ALL (06)</button>
+      <button class="filter-btn" data-filter="embedded">⚡ EMBEDDED &amp; IOT</button>
+      <button class="filter-btn" data-filter="avionics">🚀 AVIONICS</button>
+      <button class="filter-btn" data-filter="industrial">🏭 INDUSTRIAL &amp; POWER</button>
+      <button class="filter-btn" data-filter="cpu">💻 CPU ARCH</button>
+    </div>
+
+    <div class="proj-grid">
+
+      <!-- DWG-01: Headlamp (Embedded) -->
+      <div class="proj-card" data-category="embedded" data-image="photo-headlamp.jpg" data-detail="Developed embedded control logic for real-time LED control, hardware integration, and automotive lighting — the multiplexed matrix approach kept digital I/O usage down while the YOLO vision pipeline handled zone-based adaptive dimming in real time.">
+        <div>
+          <div class="proj-id"><span>MISSION-01</span> <span class="rev">JAN–APR 2026</span></div>
+          <h3>Adaptive Matrix LED Headlamp System</h3>
+          <p>Arduino-based adaptive headlamp using a multiplexed LED matrix to cut digital I/O usage, with YOLO-based computer vision for real-time vehicle detection and zone-based adaptive dimming.</p>
+          <div class="proj-meta"><span>Arduino</span><span>Embedded C</span><span>YOLO</span><span>PWM</span></div>
+        </div>
+        <div class="proj-footer-row">
+          <span class="proj-bounty">+450 EXP</span>
+          <a href="#" class="proj-link">VIEW WRITEUP →</a>
+        </div>
+      </div>
+
+      <!-- DWG-02: Energy Management (Embedded) -->
+      <div class="proj-card" data-category="embedded" data-image="photo-energy.jpg" data-detail="Developed embedded firmware for relay control, data acquisition, and automated power management — the ML forecasting layer fed predictive load-shedding decisions straight into mobile-controlled relay switching over MQTT.">
+        <div>
+          <div class="proj-id"><span>MISSION-02</span> <span class="rev">JUL–DEC 2025</span></div>
+          <h3>ESP32 Smart Energy Management System</h3>
+          <p>ESP32-based IoT system using machine learning for electrical load forecasting, with MQTT communication for real-time monitoring and mobile-controlled predictive load shedding.</p>
+          <div class="proj-meta"><span>ESP32</span><span>Machine Learning</span><span>MQTT</span><span>Relay Control</span></div>
+        </div>
+        <div class="proj-footer-row">
+          <span class="proj-bounty">+520 EXP</span>
+          <a href="#" class="proj-link">VIEW WRITEUP →</a>
+        </div>
+      </div>
+
+      <!-- DWG-03: Climate (Embedded) -->
+      <div class="proj-card" data-category="embedded" data-image="photo-sih-build.jpg" data-detail="Developed embedded firmware with MQTT communication for sensor interfacing, actuator control, and mobile monitoring — built as an internal prototype for the Smart India Hackathon, targeting agricultural cold storage regulation.">
+        <div>
+          <div class="proj-id"><span>MISSION-03</span> <span class="rev">AUG–OCT 2025</span></div>
+          <h3>Smart Modular Climate Regulation Platform</h3>
+          <p>ESP32-based IoT climate control system for agricultural cold storage — temperature and humidity sensing, Peltier cooling, and automated ventilation with MQTT mobile monitoring. Built as an SIH internal prototype.</p>
+          <div class="proj-meta"><span>ESP32</span><span>MQTT</span><span>Peltier Module</span><span>IoT</span></div>
+        </div>
+        <div class="proj-footer-row">
+          <span class="proj-bounty">+400 EXP</span>
+          <a href="#" class="proj-link">VIEW WRITEUP →</a>
+        </div>
+      </div>
+
+      <!-- DWG-04: Hack CPU (CPU) -->
+      <div class="proj-card" data-category="cpu" data-image="photo-hackcpu.jpg" data-detail="Exploring computer architecture and digital system design concepts from first principles — every gate, register, and clock signal built up from NAND logic before wiring it into a working CPU and display subsystem.">
+        <div>
+          <div class="proj-id"><span>MISSION-04</span> <span class="rev">AUG 2025–PRESENT</span></div>
+          <h3>Hack 16-Bit Computer Architecture</h3>
+          <p>Building a 16-bit computer from basic logic gates on the Hack architecture — implementing the CPU, memory, clock generation, and display subsystems from first principles.</p>
+          <div class="proj-meta"><span>Digital Logic</span><span>Computer Architecture</span><span>HDL</span></div>
+        </div>
+        <div class="proj-footer-row">
+          <span class="proj-bounty">+600 EXP</span>
+          <a href="#" class="proj-link">VIEW WRITEUP →</a>
+        </div>
+      </div>
+
+      <!-- DWG-05: Rocket Recovery (Avionics) -->
+      <div class="proj-card" data-category="avionics" data-image="photo-recovery.jpg" data-detail="Conducted feasibility studies and design reviews to improve recovery system performance, while managing timelines, allocating responsibilities, and documenting design procedures across a multidisciplinary Team IGNITION squad.">
+        <div>
+          <div class="proj-id"><span>MISSION-05</span> <span class="rev">AUG 2025–MAY 2026</span></div>
+          <h3>Controllable Paraglider Rocket Recovery</h3>
+          <p>Led design and development of the controllable paraglider rocket recovery project within Team IGNITION's recovery department — hardware development, subsystem integration, reliability analysis, and design reviews.</p>
+          <div class="proj-meta"><span>Project Lead</span><span>Team IGNITION</span><span>Avionics</span><span>Wireless Comms</span></div>
+        </div>
+        <div class="proj-footer-row">
+          <span class="proj-bounty">+580 EXP</span>
+          <a href="#" class="proj-link">VIEW WRITEUP →</a>
+        </div>
+      </div>
+
+      <!-- DWG-06: Apollo Tyres (Industrial) -->
+      <div class="proj-card" data-category="industrial" data-image="photo-industrial.jpg" data-detail="Observed electrical equipment troubleshooting and industrial safety standards on the plant floor, and analyzed production workflows and process automation to understand manufacturing efficiency in a high-volume industrial environment.">
+        <div>
+          <div class="proj-id"><span>MISSION-06</span> <span class="rev">JUN–JUL 2025</span></div>
+          <h3>Industrial Manufacturing Systems — Apollo Tyres Ltd.</h3>
+          <p>Hands-on exposure to high-volume manufacturing environments and electrical distribution networks — induction motors, motor drives, industrial control panels, and plant maintenance operations.</p>
+          <div class="proj-meta"><span>Industrial Systems</span><span>Induction Motors</span><span>Motor Drives</span><span>Internship</span></div>
+        </div>
+        <div class="proj-footer-row">
+          <span class="proj-bounty">+480 EXP</span>
+          <a href="#" class="proj-link">VIEW WRITEUP →</a>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ================= 🗺️ WORLD CAMPAIGN PROGRESSION (TIMELINE) ================= -->
+  <section id="experience">
+    <div class="eyebrow">Campaign Map</div>
+    <h2 class="arcade-sec-title">WORLD CAMPAIGN ROADMAP.</h2>
+
+    <div class="world-campaign-timeline">
+      <div class="campaign-stage-card">
+        <div class="stage-flag-icon">04</div>
+        <div class="stage-world-id">WORLD 4-1 // ACTIVE STAGE [VIT CHENNAI]</div>
+        <h3 class="stage-title">B.Tech in Electrical and Electronics Engineering</h3>
+        <div class="stage-date">AUG 2023 — PRESENT (EXPECTED 2027)</div>
+        <p class="stage-desc">
+          Vellore Institute of Technology, Chennai — 7th semester standing with a <strong>CGPA of 8.19 / 10.0</strong>. Comprehensive engineering core covering microcontrollers, closed-loop control systems, power electronic converters, transmission grids, and signal analysis.
+        </p>
+      </div>
+
+      <div class="campaign-stage-card">
+        <div class="stage-flag-icon">03</div>
+        <div class="stage-world-id">WORLD 3-1 // STAGE CLEAR [TEAM IGNITION]</div>
+        <h3 class="stage-title">Recovery Subsystem Member &amp; Project Lead — Team IGNITION</h3>
+        <div class="stage-date">AUG 2025 — MAY 2026</div>
+        <p class="stage-desc">
+          Led the project design and integration of an autonomous steerable paraglider descent recovery mechanism for high-altitude rockets within Team IGNITION's recovery department. Directed hardware fabrication, telemetry validation, and drop testing.
+        </p>
+      </div>
+
+      <div class="campaign-stage-card">
+        <div class="stage-flag-icon">02</div>
+        <div class="stage-world-id">WORLD 2-1 // STAGE CLEAR [APOLLO TYRES]</div>
+        <h3 class="stage-title">Industrial &amp; Automation Intern — Apollo Tyres Ltd.</h3>
+        <div class="stage-date">JUN 2025 — JUL 2025</div>
+        <p class="stage-desc">
+          On-site industrial manufacturing exposure: analyzed factory electrical distribution networks, 3-phase induction motor drives, industrial control panels, and plant electrical safety standards.
+        </p>
+      </div>
+
+      <div class="campaign-stage-card">
+        <div class="stage-flag-icon">01</div>
+        <div class="stage-world-id">WORLD 1-1 // ORIGIN REALM [MTHSS KALOOR]</div>
+        <h3 class="stage-title">Higher Secondary Education</h3>
+        <div class="stage-date">JUL 2021 — MAR 2023</div>
+        <p class="stage-desc">
+          Graduated with high distinction in Physics, Chemistry, and Mathematics scoring <strong>94.66%</strong> overall in Ernakulam, Kerala.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 🕹️ INSERT COIN / CONTACT COCKPIT ================= -->
+  <section id="contact">
+    <div class="contact-cockpit-frame">
+      <div class="cockpit-top-bar">
+        <span>COMMUNICATION TERMINAL // 2-PLAYER COMM READY</span>
+        <span>CREDITS: INSERT COIN</span>
+      </div>
+      <h2>JOIN FORCES FOR THE NEXT MISSION?</h2>
+      <p>
+        I am actively seeking internship opportunities, co-ops, and full-time roles in <strong>Embedded Systems</strong>, <strong>Firmware Development</strong>, <strong>Industrial Automation</strong>, and <strong>Control Systems</strong>. Let's build reliable, high-performance hardware together.
+      </p>
+      <div class="cabinet-btn-row">
+        <a href="mailto:jacobjibu386@gmail.com" class="btn-arcade">
+          <span>✉️</span> TRANSMIT EMAIL
+        </a>
+        <a href="https://www.linkedin.com/in/jacob-jibu-95a0a228b" class="btn-arcade btn-arcade-ghost" target="_blank" rel="noopener">
+          <span>🌐</span> LINKEDIN FREQ
+        </a>
+        <a href="tel:+919037129838" class="btn-arcade btn-arcade-ghost">
+          <span>📞</span> +91 90371 29838
+        </a>
+        <a href="Resume.pdf" class="btn-arcade btn-arcade-amber" target="_blank" rel="noopener">
+          <span>⚡</span> DOWNLOAD RÉSUMÉ
+        </a>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<!-- ================= HIGH-SCORE FOOTER ================= -->
+<footer>
+  <div class="container footer-inner">
+    <div>
+      © 2026 JACOB JIBU // <span style="color:var(--safety);">PLAYER 01 RIG</span>
+    </div>
+    <div>
+      HIGH SCORE: 946600 PTS // CURRENT SCORE: 819000 PTS
+    </div>
+    <div style="color:var(--yellow);">
+      INSERT COIN → PLAY AGAIN
+    </div>
+  </div>
+</footer>
+
+<!-- Modular JavaScript File -->
+<script src="app.js"></script>
+
+</body>
+</html>
