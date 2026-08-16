@@ -152,7 +152,7 @@ function toggleCli() {
 }
 
 const CLI_COMMANDS = {
-  help: "Available commands:\n- help: List commands\n- skills: Output technical skill inventory\n- projects: View the 6 engineering builds\n- experience: Show timeline\n- contact: Display phone, email, and LinkedIn\n- resume: Open PDF résumé link\n- sudo hire jacob: Issue official employment contract\n- reboot: Rerun BIOS boot sequence\n- clear: Clear terminal screen\n- exit: Close CLI",
+  help: "Available commands:\n- help: List commands\n- skills: Output technical skill inventory\n- projects: View the 6 engineering builds\n- experience: Show timeline\n- contact: Display phone, email, and LinkedIn\n- resume: Open PDF résumé link\n- sudo hire jacob: Issue official employment contract\n- play: Launch Circuit Hopper minigame\n- godmode: ??? [REDACTED CHEAT CODE]\n- reboot: Rerun BIOS boot sequence\n- clear: Clear terminal screen\n- exit: Close CLI",
   skills: "SKILLS:\n- Firmware: Embedded C, C++, Python, Assembly, Java\n- Platforms: ESP32, ESP8266, Arduino, ARM Cortex\n- Tools: MATLAB/Simulink, LTspice, Keil µVision, Arduino IDE, Git\n- Core: Hardware Validation, Circuit Design, I2C/SPI/UART, Power Electronics, Industrial Systems",
   projects: "PROJECT BUILDS:\n1. Adaptive Matrix LED Headlamp System (Arduino, YOLO, PWM)\n2. ESP32 Smart Energy Management (ML, MQTT)\n3. Smart Climate Regulation Platform (SIH, Peltier)\n4. Hack 16-Bit Computer Architecture (CPU, HDL)\n5. Rocket Recovery System (Team IGNITION - Project Lead)\n6. Industrial Manufacturing Systems (Apollo Tyres Ltd.)",
   experience: "EXPERIENCE:\n- 2023-Present: B.Tech EEE at VIT Chennai (CGPA 8.19)\n- 2025-2026: Recovery Subsystem Member & Project Lead, Team IGNITION\n- 2025: Industrial & Automation Intern, Apollo Tyres Ltd.\n- 2021-2023: MTHSS Kaloor (94.66%)",
@@ -192,6 +192,41 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // 📱 Move REBOOT / CLI / BGM / CRT / PLAY into the mobile nav menu on
+  // small screens, and back into the top toolbar on desktop. Same DOM
+  // nodes are relocated (not cloned), so every existing listener above
+  // keeps working no matter where the button currently lives.
+  (function setupResponsiveToolbar() {
+    const hudGroup = document.querySelector('.hud-btn-group');
+    if (!hudGroup || !navLinks || !navBurgerBtn) return;
+
+    const toolIds = ['rebootBtn', 'cliToggleBtn', 'bgmToggleBtn', 'crtToggleBtn', 'flappyOpenBtn'];
+    const toolBtns = toolIds.map(id => document.getElementById(id)).filter(Boolean);
+    if (!toolBtns.length) return;
+
+    let mobileToolWrap = document.getElementById('navMobileTools');
+    if (!mobileToolWrap) {
+      mobileToolWrap = document.createElement('li');
+      mobileToolWrap.id = 'navMobileTools';
+      mobileToolWrap.className = 'nav-mobile-tools';
+    }
+
+    const mq = window.matchMedia('(max-width: 900px)');
+
+    function applyLayout(isMobile) {
+      if (isMobile) {
+        toolBtns.forEach(btn => mobileToolWrap.appendChild(btn));
+        navLinks.appendChild(mobileToolWrap);
+      } else {
+        toolBtns.forEach(btn => hudGroup.insertBefore(btn, navBurgerBtn));
+        if (mobileToolWrap.parentNode) mobileToolWrap.parentNode.removeChild(mobileToolWrap);
+      }
+    }
+
+    applyLayout(mq.matches);
+    mq.addEventListener('change', (e) => applyLayout(e.matches));
+  })();
+
   // CLI triggers
   if (cliToggleBtn) cliToggleBtn.addEventListener('click', toggleCli);
   if (cliCloseBtn) cliCloseBtn.addEventListener('click', toggleCli);
@@ -229,6 +264,26 @@ document.addEventListener('DOMContentLoaded', () => {
         if (cmd === 'reboot') {
           toggleCli();
           runBiosBoot();
+          return;
+        }
+        if (cmd === 'play') {
+          toggleCli();
+          const flappyOpenBtn = document.getElementById('flappyOpenBtn');
+          if (flappyOpenBtn) flappyOpenBtn.click();
+          return;
+        }
+        if (cmd === 'godmode' || cmd === 'iddqd') {
+          const respLine2 = document.createElement('p');
+          respLine2.className = 'prompt-highlight';
+          if (window.godModeActive) {
+            respLine2.textContent = '⚠️ GOD MODE already active. You are already invincible.';
+          } else {
+            window.activateGodMode();
+            respLine2.textContent = '🔓 CHEAT ACCEPTED: GOD MODE ENABLED. Circuit Hopper collisions disabled — type \'play\' to try it.';
+          }
+          cliOutput.appendChild(respLine2);
+          cliOutput.scrollTop = cliOutput.scrollHeight;
+          Sound.cliType();
           return;
         }
 
@@ -555,3 +610,222 @@ if (canvas && cursorDot && cursorRing && !prefersReducedMotion && !isTouch) {
   }
   requestAnimationFrame(animate);
 }
+
+// ================= 🎮 CIRCUIT HOPPER MINIGAME (FLAPPY CLONE) =================
+(function () {
+  const modal = document.getElementById('flappyModal');
+  const openBtn = document.getElementById('flappyOpenBtn');
+  const closeBtn = document.getElementById('flappyModalClose');
+  const backdrop = document.getElementById('flappyModalBackdrop');
+  const canvas = document.getElementById('flappyCanvas');
+  const scoreEl = document.getElementById('flappyScore');
+  const bestEl = document.getElementById('flappyBest');
+  const godBadge = document.getElementById('godModeBadge');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+
+  const W = canvas.width, H = canvas.height;
+  const GRAVITY = 0.45;
+  const FLAP_VELOCITY = -7.2;
+  const PIPE_GAP = 150;
+  const PIPE_WIDTH = 54;
+  const PIPE_SPEED = 2.6;
+  const PIPE_INTERVAL = 105; // frames between new pipes
+
+  let bird, pipes, frame, score, best, running, godMode, rafId;
+
+  window.godModeActive = false;
+
+  function loadBest() {
+    try { return parseInt(localStorage.getItem('circuitHopperBest') || '0', 10); } catch (e) { return 0; }
+  }
+  function saveBest(val) {
+    try { localStorage.setItem('circuitHopperBest', String(val)); } catch (e) {}
+  }
+
+  function resetGame() {
+    bird = { x: 70, y: H / 2, vy: 0, size: 18 };
+    pipes = [];
+    frame = 0;
+    score = 0;
+    running = true;
+    godMode = window.godModeActive;
+    if (scoreEl) scoreEl.textContent = '0';
+    if (godBadge) godBadge.classList.toggle('hidden', !godMode);
+  }
+
+  function flap() {
+    if (!running) { resetGame(); return; }
+    bird.vy = FLAP_VELOCITY;
+    Sound.blip();
+  }
+
+  function spawnPipe() {
+    const margin = 50;
+    const gapY = margin + Math.random() * (H - margin * 2 - PIPE_GAP);
+    pipes.push({ x: W, gapY, passed: false });
+  }
+
+  function rectsOverlap(ax, ay, aw, ah, bx, by, bw, bh) {
+    return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
+  }
+
+  function update() {
+    frame++;
+    bird.vy += GRAVITY;
+    bird.y += bird.vy;
+
+    if (frame % PIPE_INTERVAL === 0) spawnPipe();
+
+    for (let i = pipes.length - 1; i >= 0; i--) {
+      const p = pipes[i];
+      p.x -= PIPE_SPEED;
+
+      if (!p.passed && p.x + PIPE_WIDTH < bird.x) {
+        p.passed = true;
+        score++;
+        if (scoreEl) scoreEl.textContent = String(score);
+        Sound.blip();
+      }
+
+      if (!godMode) {
+        const birdBox = [bird.x - bird.size / 2, bird.y - bird.size / 2, bird.size, bird.size];
+        const topPipe = [p.x, 0, PIPE_WIDTH, p.gapY];
+        const botPipe = [p.x, p.gapY + PIPE_GAP, PIPE_WIDTH, H - (p.gapY + PIPE_GAP)];
+        if (rectsOverlap(...birdBox, ...topPipe) || rectsOverlap(...birdBox, ...botPipe)) {
+          gameOver();
+        }
+      }
+
+      if (p.x + PIPE_WIDTH < -5) pipes.splice(i, 1);
+    }
+
+    if (!godMode && (bird.y + bird.size / 2 > H || bird.y - bird.size / 2 < 0)) {
+      gameOver();
+    } else if (godMode) {
+      if (bird.y > H) bird.y = 0;
+      if (bird.y < 0) bird.y = H;
+    }
+  }
+
+  function gameOver() {
+    running = false;
+    if (score > best) {
+      best = score;
+      saveBest(best);
+      if (bestEl) bestEl.textContent = String(best);
+    }
+    Sound.blip();
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+
+    // background grid
+    ctx.strokeStyle = 'rgba(198,255,61,0.06)';
+    ctx.lineWidth = 1;
+    for (let gx = 0; gx < W; gx += 24) { ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, H); ctx.stroke(); }
+    for (let gy = 0; gy < H; gy += 24) { ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(W, gy); ctx.stroke(); }
+
+    // pipes styled like PCB traces
+    pipes.forEach(p => {
+      ctx.fillStyle = godMode ? '#ffc857' : '#c6ff3d';
+      ctx.shadowColor = godMode ? '#ffc857' : '#c6ff3d';
+      ctx.shadowBlur = 10;
+      ctx.fillRect(p.x, 0, PIPE_WIDTH, p.gapY);
+      ctx.fillRect(p.x, p.gapY + PIPE_GAP, PIPE_WIDTH, H - (p.gapY + PIPE_GAP));
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#020408';
+      ctx.fillRect(p.x + 6, 8, PIPE_WIDTH - 12, Math.max(0, p.gapY - 16));
+      ctx.fillRect(p.x + 6, p.gapY + PIPE_GAP + 8, PIPE_WIDTH - 12, Math.max(0, H - (p.gapY + PIPE_GAP) - 16));
+    });
+
+    // bird styled like a little IC chip
+    ctx.save();
+    ctx.translate(bird.x, bird.y);
+    const angle = Math.max(-0.5, Math.min(0.9, bird.vy * 0.06));
+    ctx.rotate(angle);
+    ctx.fillStyle = godMode ? '#ffc857' : '#ffe066';
+    ctx.shadowColor = godMode ? '#ffc857' : '#ffe066';
+    ctx.shadowBlur = 14;
+    ctx.fillRect(-bird.size / 2, -bird.size / 2, bird.size, bird.size);
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#000';
+    for (let leg = -1; leg <= 1; leg += 2) {
+      ctx.fillRect(-bird.size / 2 - 3, leg * 4 - 1, 3, 2);
+      ctx.fillRect(bird.size / 2, leg * 4 - 1, 3, 2);
+    }
+    ctx.restore();
+
+    if (!running) {
+      ctx.fillStyle = 'rgba(2,4,8,0.78)';
+      ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = '#c6ff3d';
+      ctx.font = '16px "Press Start 2P", monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('GAME OVER', W / 2, H / 2 - 30);
+      ctx.font = '10px "Press Start 2P", monospace';
+      ctx.fillStyle = '#ffe066';
+      ctx.fillText(`SCORE: ${score}`, W / 2, H / 2 + 4);
+      ctx.fillText(`BEST: ${best}`, W / 2, H / 2 + 24);
+      ctx.fillStyle = '#cdd9e5';
+      ctx.font = '8px "Press Start 2P", monospace';
+      ctx.fillText('TAP TO RETRY', W / 2, H / 2 + 54);
+      ctx.textAlign = 'left';
+    }
+  }
+
+  function loop() {
+    if (running) update();
+    draw();
+    rafId = requestAnimationFrame(loop);
+  }
+
+  function openFlappy() {
+    if (!modal) return;
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+    best = loadBest();
+    if (bestEl) bestEl.textContent = String(best);
+    resetGame();
+    cancelAnimationFrame(rafId);
+    loop();
+    Sound.blip();
+  }
+
+  function closeFlappy() {
+    if (!modal) return;
+    modal.classList.remove('active');
+    document.body.style.overflow = '';
+    cancelAnimationFrame(rafId);
+  }
+
+  if (openBtn) openBtn.addEventListener('click', openFlappy);
+  if (closeBtn) closeBtn.addEventListener('click', closeFlappy);
+  if (backdrop) backdrop.addEventListener('click', closeFlappy);
+  window.addEventListener('keydown', (e) => {
+    if (!modal || !modal.classList.contains('active')) return;
+    if (e.key === 'Escape') { closeFlappy(); return; }
+    if (e.key === ' ' || e.code === 'Space') { e.preventDefault(); flap(); }
+  });
+  canvas.addEventListener('mousedown', flap);
+  canvas.addEventListener('touchstart', (e) => { e.preventDefault(); flap(); }, { passive: false });
+
+  // 🕹️ GOD MODE — activate via CLI command "godmode" or the classic Konami code
+  window.activateGodMode = function () {
+    window.godModeActive = true;
+    if (godBadge) godBadge.classList.remove('hidden');
+    if (typeof godMode !== 'undefined') godMode = true;
+  };
+
+  const KONAMI = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];
+  let konamiProgress = [];
+  window.addEventListener('keydown', (e) => {
+    konamiProgress.push(e.key);
+    konamiProgress = konamiProgress.slice(-KONAMI.length);
+    if (konamiProgress.length === KONAMI.length && konamiProgress.every((k, i) => k === KONAMI[i])) {
+      window.activateGodMode();
+      konamiProgress = [];
+    }
+  });
+})();

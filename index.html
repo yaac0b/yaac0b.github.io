@@ -90,6 +90,25 @@
   </div>
 </div>
 
+<!-- ================= 🎮 CIRCUIT HOPPER MINIGAME (FLAPPY CLONE) ================= -->
+<div id="flappyModal" class="flappy-modal">
+  <div class="flappy-modal-backdrop" id="flappyModalBackdrop"></div>
+  <div class="flappy-modal-panel">
+    <div class="flappy-modal-bar">
+      <span>🐤 CIRCUIT HOPPER <span id="godModeBadge" class="god-badge hidden">// GOD MODE</span></span>
+      <button class="project-modal-close" id="flappyModalClose" aria-label="Close">✕ CLOSE [ESC]</button>
+    </div>
+    <div class="flappy-game-wrap">
+      <canvas id="flappyCanvas" width="360" height="480"></canvas>
+      <div class="flappy-hud">
+        <span>SCORE: <span id="flappyScore">0</span></span>
+        <span>BEST: <span id="flappyBest">0</span></span>
+      </div>
+      <div class="flappy-hint">TAP / CLICK / SPACE TO FLAP</div>
+    </div>
+  </div>
+</div>
+
 <!-- ================= TOP ARCADE HUD ================= -->
 <nav>
   <div class="nav-left">
@@ -121,9 +140,13 @@
     <button class="hud-tool-btn" id="crtToggleBtn" title="Toggle CRT Scanlines">
       📺 CRT: <span id="crtState">ON</span>
     </button>
+    <!-- 🎮 Flappy Minigame -->
+    <button class="hud-tool-btn" id="flappyOpenBtn" title="Play Circuit Hopper (Flappy Bird clone)">
+      🎮 PLAY
+    </button>
     <!-- ☰ Mobile Nav Toggle -->
     <button class="hud-tool-btn nav-burger-btn" id="navBurgerBtn" aria-label="Open menu" aria-expanded="false">
-      ☰ MENU
+      ☰
     </button>
   </div>
 
@@ -622,6 +645,6 @@
 
 <!-- Modular JavaScript File -->
 <script src="app.js"></script>
-<h1>hi</h1>
+
 </body>
 </html>
