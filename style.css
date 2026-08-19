@@ -920,6 +920,33 @@ footer {
 }
 
 /* ===================================================================
+   🌳 CAPABILITIES & PERKS — MOBILE CAROUSEL (matches "Stage Proof")
+   Same horizontal, snap-scrolling card pattern as Field Telemetry /
+   Projects, so all three sections behave consistently on phones.
+=================================================================== */
+@media (max-width: 800px) {
+  .tree-branch-grid {
+    display: flex;
+    grid-template-columns: unset;
+    overflow-x: auto;
+    gap: 16px;
+    padding: 6px 4px 20px;
+    margin: 0 -4px 8px;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+  }
+  .tree-branch-grid::-webkit-scrollbar { display: none; }
+  .tree-branch {
+    flex: 0 0 auto;
+    width: min(85vw, 320px);
+    scroll-snap-align: start;
+  }
+  #skills .eyebrow::after {
+    content: '· SWIPE →'; margin-left: 8px; color: var(--steel); font-size: 10px; letter-spacing: 0.08em;
+  }
+}
+
+/* ===================================================================
    🧭 TOP NAV TOOLBAR — PROFESSIONAL REFRESH
    Keeps the existing wrap/stack behavior (buttons drop to new rows on
    narrow screens exactly as before) but replaces the loud arcade-button

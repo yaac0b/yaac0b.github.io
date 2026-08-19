@@ -50,7 +50,13 @@ const Sound = {
     setTimeout(() => playTone(1318.51, 'square', 0.28, 0.09), 80);
   },
   bootBeep() { playTone(880, 'sine', 0.12, 0.1); },
-  cliType() { playTone(700 + Math.random() * 200, 'triangle', 0.02, 0.02); }
+  cliType() { playTone(700 + Math.random() * 200, 'triangle', 0.02, 0.02); },
+  powerUp() {
+    // Classic 8-bit "cheat unlocked" arpeggio — Mario 1-Up style
+    [523.25, 659.25, 783.99, 1046.5, 1318.5].forEach((freq, i) => {
+      setTimeout(() => playTone(freq, 'square', 0.12, 0.07), i * 80);
+    });
+  }
 };
 
 // Real-Time Synthesized 8-Bit Chiptune Ambient BGM
@@ -100,7 +106,7 @@ const BOOT_MESSAGES = [
   "  -> SPI BUS 0 (SD CARD / TFT DISPLAY): DETECTED",
   "  -> UART 0 (DEBUG CONSOLE @ 115200 BAUD): READY",
   "  -> 802.11 b/g/n Wi-Fi & BLE 4.2 PHY: ONLINE",
-  "LOADING FIRMWARE: Jacob_Jibu_Embedded_OS_v7.0.bin",
+  "LOADING SYSTEM: Jacob_Jibu_EEE_OS_v7.0.bin",
   "VERIFYING CHECKSUM: 0x819000 [CGPA 8.19 VALIDATED]",
   "SYSTEM READY. BOOTING SHELL INTERFACE..."
 ];
@@ -153,13 +159,13 @@ function toggleCli() {
 
 const CLI_COMMANDS = {
   help: "Available commands:\n- help: List commands\n- skills: Output technical skill inventory\n- projects: View the 6 engineering builds\n- experience: Show timeline\n- contact: Display phone, email, and LinkedIn\n- resume: Open PDF résumé link\n- sudo hire jacob: Issue official employment contract\n- play: Launch Circuit Hopper minigame\n- godmode: ??? [REDACTED CHEAT CODE]\n- reboot: Rerun BIOS boot sequence\n- clear: Clear terminal screen\n- exit: Close CLI",
-  skills: "SKILLS:\n- Firmware: Embedded C, C++, Python, Assembly, Java\n- Platforms: ESP32, ESP8266, Arduino, ARM Cortex\n- Tools: MATLAB/Simulink, LTspice, Keil µVision, Arduino IDE, Git\n- Core: Hardware Validation, Circuit Design, I2C/SPI/UART, Power Electronics, Industrial Systems",
-  projects: "PROJECT BUILDS:\n1. Adaptive Matrix LED Headlamp System (Arduino, YOLO, PWM)\n2. ESP32 Smart Energy Management (ML, MQTT)\n3. Smart Climate Regulation Platform (SIH, Peltier)\n4. Hack 16-Bit Computer Architecture (CPU, HDL)\n5. Rocket Recovery System (Team IGNITION - Project Lead)\n6. Industrial Manufacturing Systems (Apollo Tyres Ltd.)",
-  experience: "EXPERIENCE:\n- 2023-Present: B.Tech EEE at VIT Chennai (CGPA 8.19)\n- 2025-2026: Recovery Subsystem Member & Project Lead, Team IGNITION\n- 2025: Industrial & Automation Intern, Apollo Tyres Ltd.\n- 2021-2023: MTHSS Kaloor (94.66%)",
+  skills: "SKILLS:\n- Core Electrical: Circuit Design, Power Electronics, Electrical Machines & Drives, Power Systems & Distribution, Control Systems, Industrial Automation\n- Tools: MATLAB/Simulink, LTspice, Keil µVision, Arduino IDE, Git\n- Programming & Embedded Platforms: Embedded C, C++, Python, Java, ESP32, ESP8266, Arduino\n- Additional: IoT, Wireless Communication, Sensor Interfacing, Machine Learning for Control",
+  projects: "PROJECT BUILDS:\n1. Rocket Recovery System (Team IGNITION - Electrical Lead)\n2. Industrial Manufacturing Systems (Apollo Tyres Ltd.)\n3. Adaptive Matrix LED Headlamp System (PWM, LED Driver Circuits)\n4. Smart Climate Regulation Platform (SIH, Peltier)\n5. Smart Energy Management & Load Shedding (Relay Control, ESP32)\n6. Hack 16-Bit Computer Architecture (CPU, HDL)",
+  experience: "EXPERIENCE:\n- 2023-Present: B.Tech EEE at VIT Chennai (CGPA 8.19)\n- 2025-2026: Electrical Systems Lead, Recovery Systems, Team IGNITION\n- 2025: Automation & Industrial Intern, Apollo Tyres Ltd.\n- 2021-2023: MTHSS Kaloor (94.66%)",
   contact: "CONTACT INFO:\n- Email: jacobjibu386@gmail.com\n- Phone: +91 90371 29838\n- LinkedIn: https://www.linkedin.com/in/jacob-jibu-95a0a228b",
   resume: "Opening Résumé PDF in new tab...",
   reboot: "Rebooting system...",
-  whoami: "guest (Authenticated on Jacob's Embedded Rig)",
+  whoami: "guest (Authenticated on Jacob's EEE Rig)",
   clear: "",
   "sudo hire jacob": "🎉 [SUCCESS] EXCELLENT DECISION! Jacob Jibu has accepted the mission. Contact jacobjibu386@gmail.com immediately to finalize contract details!"
 };
@@ -181,13 +187,13 @@ document.addEventListener('DOMContentLoaded', () => {
     navBurgerBtn.addEventListener('click', () => {
       const isOpen = navLinks.classList.toggle('open');
       navBurgerBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-      navBurgerBtn.textContent = isOpen ? '✕ CLOSE' : '☰ MENU';
+      navBurgerBtn.textContent = isOpen ? '✕' : '☰';
     });
     navLinks.querySelectorAll('a').forEach(link => {
       link.addEventListener('click', () => {
         navLinks.classList.remove('open');
         navBurgerBtn.setAttribute('aria-expanded', 'false');
-        navBurgerBtn.textContent = '☰ MENU';
+        navBurgerBtn.textContent = '☰';
       });
     });
   }
@@ -286,7 +292,6 @@ document.addEventListener('DOMContentLoaded', () => {
           Sound.cliType();
           return;
         }
-
         const respLine = document.createElement('p');
         respLine.className = 'prompt-resp';
         if (CLI_COMMANDS[cmd]) {
@@ -811,21 +816,10 @@ if (canvas && cursorDot && cursorRing && !prefersReducedMotion && !isTouch) {
   canvas.addEventListener('mousedown', flap);
   canvas.addEventListener('touchstart', (e) => { e.preventDefault(); flap(); }, { passive: false });
 
-  // 🕹️ GOD MODE — activate via CLI command "godmode" or the classic Konami code
+  // 🕹️ GOD MODE — activate via CLI command "godmode"
   window.activateGodMode = function () {
     window.godModeActive = true;
     if (godBadge) godBadge.classList.remove('hidden');
     if (typeof godMode !== 'undefined') godMode = true;
   };
-
-  const KONAMI = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];
-  let konamiProgress = [];
-  window.addEventListener('keydown', (e) => {
-    konamiProgress.push(e.key);
-    konamiProgress = konamiProgress.slice(-KONAMI.length);
-    if (konamiProgress.length === KONAMI.length && konamiProgress.every((k, i) => k === KONAMI[i])) {
-      window.activateGodMode();
-      konamiProgress = [];
-    }
-  });
 })();
